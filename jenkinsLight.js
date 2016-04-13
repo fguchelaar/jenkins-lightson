@@ -90,6 +90,7 @@ JenkinsLight.prototype.refreshBuildState = function() {
     });
   }).on('error', function(e){
     console.log("Got an error: ", e);
+    _this.setBuildState('ERROR');
   });
 };
 
