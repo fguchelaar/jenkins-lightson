@@ -2,7 +2,9 @@
 
 A Node.js application to control Bluetooth LED lights with respect to jenkins' build states.
 
-To configure builds, you need to add configurations to the `config` variable in `index.js`. 
+To configure builds, you need to add configurations to the `config` variable in `index.js`.  The
+keys in the config-dictionary are the uuid's of the lights.
+
 Example:
 
 ```JavaScript

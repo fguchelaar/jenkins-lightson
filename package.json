@@ -2,11 +2,10 @@
   "name": "jenkins-lightson",
   "version": "0.0.1",
   "description": "using jenkin's buildstatus, control bluetooth le light bulbs",
+  "keywords": "jenkins, bluetooth le, led, lights",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
   "author": "Frank Guchelaar",
+  "repository" : "https://github.com/fguchelaar/jenkins-lightson",
   "license": "MIT",
   "dependencies": {
     "express": "^4.13.4",
