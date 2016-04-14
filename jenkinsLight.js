@@ -2,10 +2,11 @@ var http = require('http');
 var noble = require('noble');
 
 var color_service = 'ffe5';
-var red_char = 'ffe6';
-var green_char = 'ffe7';
-var blue_char = 'ffe8';
-var white_char = 'ffea';
+var red_char_uuid = 'ffe6';
+var green_char_uuid = 'ffe7';
+var blue_char_uuid = 'ffe8';
+var white_char_uuid = 'ffea';
+var rgbw_char_uuid = 'ffe9';
 
 function JenkinsLight(host, port, job, peripheral) {
   this._host = host;
@@ -17,6 +18,7 @@ function JenkinsLight(host, port, job, peripheral) {
   this._blue = undefined;
   this._green = undefined;
   this._white = undefined;
+  this._rgbw = undefined;
 
   var _this = this;
 
@@ -27,24 +29,27 @@ function JenkinsLight(host, port, job, peripheral) {
 
       var service = services[i];
 
-      service.discoverCharacteristics([red_char, blue_char, green_char, white_char], function(error, characteristics) {
+      service.discoverCharacteristics([red_char_uuid, blue_char_uuid, green_char_uuid, white_char_uuid, rgbw_char_uuid], function(error, characteristics) {
 
         console.log('discovered the following characteristics:');
         for (var i in characteristics) {
           var characteristic = characteristics[i];
           console.log(' ' + i + ': ' + characteristic.uuid);
           switch(characteristic.uuid) {
-            case red_char:
+            case red_char_uuid:
             _this._red = characteristic;
             break;
-            case blue_char:
+            case blue_char_uuid:
             _this._blue = characteristic;
             break;
-            case green_char:
+            case green_char_uuid:
             _this._green = characteristic;
             break;
-            case white_char:
+            case white_char_uuid:
             _this._white = characteristic;
+            break;
+            case rgbw_char_uuid:
+            _this._rgbw = characteristic;
             break;
           }
         }
@@ -97,40 +102,51 @@ JenkinsLight.prototype.refreshBuildState = function() {
 JenkinsLight.prototype.setBuildState = function(state) {
   console.log('set build state: ' + state);
 
-  var r = 0x00;
-  var g = 0x00;
-  var b = 0x00;
-  var w = 0x00;
+  var bytes = [];
 
-  switch(state) {
+  // Static color mode:
+  //
+  //  0x56,  0x10,  0x00,  0x00,  0x00,  0xF0,  0xAA
+  //    |      |      |      |      |      |      |
+  // constant  |    green    |   constant  |   constant
+  //          red          blue        constant
+
+  // Built-in function mode:
+  //
+  //  0xBB,  0x28,  0x0A,  0x44
+  //    |      |      |      |
+  // constant  |    speed    |
+  //          mode        constant
+
+  switch(state.toUpperCase()) {
     case 'FAILURE':
     {
-      r = 0x10;
+      bytes = [0x56, 0x10, 0x00, 0x00, 0x00, 0xF0, 0xAA];
       break;
     }
     case 'SUCCESS':
-    {    g = 0x10;
+    {
+      bytes = [0x56, 0x00, 0x10, 0x00, 0x00, 0xF0, 0xAA];
       break;
     }
     case 'BUILDING':
-    {    b = 0x10;
+    {
+      bytes = [0x56, 0x00, 0x00, 0x10, 0x00, 0xF0, 0xAA];
+//      bytes = [0xBB, 0x28, 0x0A, 0x44]; // Blue gradual change
       break;
     }
-    case 'initial':
-    {    g = 0x01;
-      w = 0x01;
+    case 'INITIAL':
+    {
+      bytes = [0x56, 0x02, 0x02, 0x00, 0x00, 0xF0, 0xAA];
       break;
     }
     default:
-    {    w = 0x10;
+    {    
+      bytes = [0x56, 0x04, 0x02, 0x00, 0x00, 0xF0, 0xAA];
       break;
     }
   }
-
-  this._red.write(new Buffer([r]), true);
-  this._green.write(new Buffer([g]), true);
-  this._blue.write(new Buffer([b]), true);
-  this._white.write(new Buffer([w]), true);
+  this._rgbw.write(new Buffer(bytes), true);
 };
 
 module.exports = JenkinsLight;
