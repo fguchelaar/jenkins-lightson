@@ -105,15 +105,15 @@ JenkinsLight.prototype.setBuildState = function(state) {
   switch(state) {
     case 'FAILURE':
     {
-      r = 0x01;
+      r = 0x10;
       break;
     }
     case 'SUCCESS':
-    {    g = 0x01;
+    {    g = 0x10;
       break;
     }
     case 'BUILDING':
-    {    b = 0x01;
+    {    b = 0x10;
       break;
     }
     case 'initial':

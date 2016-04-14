@@ -2,9 +2,7 @@ var express = require('express');
 var noble = require('noble');
 var jenkinsLight = require('./jenkinsLight.js');
 
-// Add your config here
-var config = {
-};
+var config = require('./config.js');
 
 console.log('Let there be green light');
 
@@ -25,13 +23,10 @@ noble.on('discover', function(peripheral) {
 	peripheral.connect(function(error) {
 		console.log('connected to peripheral: ' + peripheral.uuid);
 
-    var job = config[peripheral.uuid];
+    var job = config.lights[peripheral.uuid];
     console.log(job); 
     if (job) {
-      console.log('found job for light with name: ' + peripheral.advertisement.localName)
-      var jl = new jenkinsLight(job.host, job.port, job.job, peripheral);
-      lights.push(jl);  
-      console.log('added JenkinsLight: ' + jl);
+      lights.push(new jenkinsLight(job.host, job.port, job.job, peripheral)); 
     }
   });
 });
