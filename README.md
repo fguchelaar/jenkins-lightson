@@ -22,3 +22,7 @@ config.lights = {
   }
 };
 ```
+
+## Lights
+
+The lights I've used for this are: http://www.applamp.nl/led-magical-bluetooth-led-lamp-16m-kleurenwarm-wit.html. I'm guessing these are more or less the same as: http://zengge.en.alibaba.com/product/1658905204-0/Music_Group_Timer_WiFi_LED_Bulb_Wifi_rgbw_led_bulb_light_E26_E14_E27_LED_WiFi_Bulb.html (be sure to get a **Bluetooth** version!).
