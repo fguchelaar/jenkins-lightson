@@ -1,16 +1,18 @@
 var express = require('express');
 var noble = require('noble');
+var CronJob = require('cron').CronJob;
 var jenkinsLight = require('./jenkinsLight.js');
 
 var config = require('./config.js');
 
-console.log('Let there be green light');
-
 var lights = []
+var color_service = 'ffe5';
+
+console.log('Let there be green light');
 
 noble.on('stateChange', function(state) {
 	if (state === 'poweredOn') {
-		noble.startScanning(['ffe5']);
+		noble.startScanning([color_service]);
 	} else {
 		noble.stopScanning();
 	}
@@ -31,13 +33,53 @@ noble.on('discover', function(peripheral) {
   });
 });
 
+//
+// Cronjobs to turn the lights on/off
+//
 
+// turnOn can be called while 'on', so no harm is done doing it often
+if (config.onSchedule) {
+  console.log('Schedule for lights ON: ' + config.onSchedule);
+  new CronJob(config.onSchedule,
+    function () {
+      console.log("Turning all lights ON");
+      for (i in lights) {
+        lights[i].turnOn(); 
+      }
+    },
+    null,
+    true);
+}
+
+if (config.offSchedule) {
+  console.log('Schedule for lights OFF: ' + config.offSchedule);
+  new CronJob(config.offSchedule,
+    function () {
+      console.log("Turning all lights OFF");
+      for (i in lights) {
+        lights[i].turnOff();
+      }
+    },
+    null,
+    true);
+}
+
+//
 // REST API, primarily for testing purposes
+//
 var router = express.Router();
 
 router.get('/jl/:state', function (req,res,next) {
   for (i in lights) {
-    lights[i].setBuildState(req.params.state);
+    if (req.params.state === 'on') {
+      lights[i].turnOn();
+    }
+    else if (req.params.state === 'off') {
+      lights[i].turnOff();
+    }
+    else {
+      lights[i].setBuildState(req.params.state);
+    }
   }
   res.json({'state': req.params.state});
 });

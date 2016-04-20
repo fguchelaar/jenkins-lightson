@@ -2,7 +2,9 @@
 
 A Node.js application to control Bluetooth LED lights with respect to jenkins' build states.
 
-To configure builds, you need to add a configuration-file named `config.js` in the root of the
+## Configuration
+
+To configure the builds, you need to add a configuration-file named `config.js` in the root of the
 directory. A sample configuration-file is provided in `sample-config.js`. The keys in the 
 config-dictionary are the uuid's of the lights.
 
@@ -22,6 +24,22 @@ config.lights = {
   }
 };
 ```
+
+### Scheduled on/off hours
+
+I've added the option to schedule `turnOn` and `turnOff` commands, using the `cron` module. You can configure
+these schedules in `config.js` as well. Check `sample-config.js` for an example.
+
+```JavaScript
+// cron-style schedule for turning the lights ON
+config.onSchedule = '0 0,15,30,45 08-18 * * 1-5';
+
+// cron-style schedule for turning the lights OFF
+config.offSchedule = '0 10,25,40,55 08-18 * * 1-5';
+```
+
+If you omit these from the `config.js` file, the lights will stay on indefinitely.
+
 
 ## Lights
 
