@@ -22,14 +22,14 @@ function JenkinsLight(host, port, job, peripheral) {
   this._peripheral.discoverServices([color_service], function(error, services) {
 
     for (var i in services) {
-      console.log('  ' + i + ' uuid: ' + services[i].uuid);
+      _this.log('  ' + i + ' uuid: ' + services[i].uuid);
       var service = services[i];
 
       service.discoverCharacteristics([rgbw_char_uuid], function(error, characteristics) {
 
         for (var i in characteristics) {
           var characteristic = characteristics[i];
-          console.log(' ' + i + ': ' + characteristic.uuid);
+          _this.log(' ' + i + ': ' + characteristic.uuid);
           if (characteristic.uuid === rgbw_char_uuid) {
             _this._rgbw = characteristic;
           }
@@ -43,7 +43,7 @@ function JenkinsLight(host, port, job, peripheral) {
           }, 200);
         }
         else {
-          console.error('could not find "rgbw characteristic"');
+          _this.log('could not find "rgbw characteristic"');
         }
       });
     }
@@ -52,7 +52,7 @@ function JenkinsLight(host, port, job, peripheral) {
 
 JenkinsLight.prototype.turnOn = function() {
   if (!this._enabled) {
-    console.log('[' + this._job + '] swithed to ON');
+    this.log('swithed to ON');
 
     this._enabled = true;
     
@@ -68,13 +68,17 @@ JenkinsLight.prototype.turnOn = function() {
 
 JenkinsLight.prototype.turnOff = function() {
   if (this._enabled) {
-    console.log('[' + this._job + '] swithed to OFF');
+    this.log('swithed to OFF');
     this._enabled = false;
 
     clearInterval(this._refreshTimer);
     this._refreshTimer = undefined;
     this._rgbw.write(new Buffer(commands.off()), true);
   }
+};
+
+JenkinsLight.prototype.log = function(message) {
+  console.log(new Date().toLocaleString() + ' - [' + this._job + '] - ' + message);
 };
 
 JenkinsLight.prototype.refreshBuildState = function() {
@@ -90,17 +94,25 @@ JenkinsLight.prototype.refreshBuildState = function() {
     });
 
     res.on('end', function(){
-      var response = JSON.parse(body);
 
-      if (response.building) {
-        _this.setBuildState('BUILDING');
+      try {
+        var response = JSON.parse(body);
+
+        if (response.building) {
+          _this.setBuildState('BUILDING');
+        }
+        else {
+          _this.setBuildState(response.result);
+        }
+
+      } catch(e){
+        _this.log('error getting JSON: ' + e);
+        _this.setBuildState('ERROR');
       }
-      else {
-        _this.setBuildState(response.result);
-      }
+
     });
   }).on('error', function(e){
-    console.log("Got an error: ", e);
+    _this.log('got an error: ' + e);
     _this.setBuildState('ERROR');
   });
 };
@@ -110,7 +122,7 @@ JenkinsLight.prototype.setBuildState = function(state) {
   if (this._enabled && this.lastBuildState !== state) {
     this.lastBuildState = state;
 
-    console.log('[' + this._job + '] set build state to: ' + state);
+    this.log('set build state to: ' + state);
 
     var bytes = [];
 
