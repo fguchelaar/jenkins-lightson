@@ -48,6 +48,12 @@ function JenkinsLight(host, port, job, peripheral) {
       });
     }
   });
+
+  this._peripheral.once('disconnect', function () {
+    _this.log('disconnected');
+    // TODO: emit some event, so that we can rescan 
+  });
+
 }
 
 JenkinsLight.prototype.turnOn = function() {
@@ -157,7 +163,9 @@ JenkinsLight.prototype.setBuildState = function(state) {
     }
 
     this._rgbw.write(new Buffer(bytes), true, function(error) {
-      _this.log("ERROR: writing to characteristic: " + error);
+      if (error != null) {
+        _this.log("ERROR: writing to characteristic: " + error);
+      }
     });
   }
 };
