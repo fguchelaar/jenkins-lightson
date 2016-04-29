@@ -106,13 +106,13 @@ JenkinsLight.prototype.refreshBuildState = function() {
         }
 
       } catch(e){
-        _this.log('error getting JSON: ' + e);
+        _this.log('ERROR: getting JSON: ' + e);
         _this.setBuildState('ERROR');
       }
 
     });
   }).on('error', function(e){
-    _this.log('got an error: ' + e);
+    _this.log('ERROR: ' + e);
     _this.setBuildState('ERROR');
   });
 };
@@ -120,6 +120,8 @@ JenkinsLight.prototype.refreshBuildState = function() {
 JenkinsLight.prototype.setBuildState = function(state) {
 
   if (this._enabled && this.lastBuildState !== state) {
+    var _this = this;
+
     this.lastBuildState = state;
 
     this.log('set build state to: ' + state);
@@ -153,7 +155,10 @@ JenkinsLight.prototype.setBuildState = function(state) {
         break;
       }
     }
-    this._rgbw.write(new Buffer(bytes), true);
+
+    this._rgbw.write(new Buffer(bytes), true, function(error) {
+      _this.log("ERROR: writing to characteristic: " + error);
+    });
   }
 };
 

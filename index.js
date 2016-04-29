@@ -8,9 +8,15 @@ var config = require('./config.js');
 var lights = []
 var color_service = 'ffe5';
 
-console.log('Let there be green light');
+
+function log (message) {
+  console.log(new Date().toLocaleString() + ' - ' + message);
+};
+
+log('Let there be green light');
 
 noble.on('stateChange', function(state) {
+  log('bluetooth adapter state changed: ' + state)
 	if (state === 'poweredOn') {
 		noble.startScanning([color_service]);
 	} else {
@@ -19,14 +25,13 @@ noble.on('stateChange', function(state) {
 });
 
 noble.on('discover', function(peripheral) {
-	console.log('Found device with local name: ' + peripheral.advertisement.localName);
-	console.log('advertising the following service uuid\'s: ' + peripheral.advertisement.serviceUuids);
+	log('Found device with local name: ' + peripheral.advertisement.localName);
+	log('\tadvertising the following service uuid\'s: ' + peripheral.advertisement.serviceUuids);
 
 	peripheral.connect(function(error) {
-		console.log('connected to peripheral: ' + peripheral.uuid);
+		log('connected to peripheral: ' + peripheral.uuid);
 
     var job = config.lights[peripheral.uuid];
-    console.log(job); 
     if (job) {
       lights.push(new jenkinsLight(job.host, job.port, job.job, peripheral)); 
     }
@@ -39,10 +44,10 @@ noble.on('discover', function(peripheral) {
 
 // turnOn can be called while 'on', so no harm is done doing it often
 if (config.onSchedule) {
-  console.log('Schedule for lights ON: ' + config.onSchedule);
+  log('Schedule for lights ON: ' + config.onSchedule);
   new CronJob(config.onSchedule,
     function () {
-      console.log("Turning all lights ON");
+      log("Turning all lights ON");
       for (i in lights) {
         lights[i].turnOn(); 
       }
@@ -52,10 +57,10 @@ if (config.onSchedule) {
 }
 
 if (config.offSchedule) {
-  console.log('Schedule for lights OFF: ' + config.offSchedule);
+  log('Schedule for lights OFF: ' + config.offSchedule);
   new CronJob(config.offSchedule,
     function () {
-      console.log("Turning all lights OFF");
+      log("Turning all lights OFF");
       for (i in lights) {
         lights[i].turnOff();
       }
@@ -101,5 +106,5 @@ function onListening() {
   var bind = typeof addr === 'string'
   ? 'pipe ' + addr
   : 'port ' + addr.port;
-  console.log('Listening on ' + bind);
+  log('Listening on ' + bind);
 }
