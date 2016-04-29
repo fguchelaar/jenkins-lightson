@@ -157,7 +157,9 @@ JenkinsLight.prototype.setBuildState = function(state) {
     }
 
     this._rgbw.write(new Buffer(bytes), true, function(error) {
-      _this.log("ERROR: writing to characteristic: " + error);
+      if (error != null) {
+        _this.log("ERROR: writing to characteristic: " + error);
+      }
     });
   }
 };
