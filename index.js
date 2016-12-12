@@ -33,7 +33,7 @@ noble.on('discover', function(peripheral) {
 
     var job = config.lights[peripheral.uuid];
     if (job) {
-      lights.push(new jenkinsLight(job.host, job.port, job.job, peripheral)); 
+      lights.push(new jenkinsLight(job.baseURL, job.project, job.buildDefinition, job.username, job.password, job.domain, peripheral)); 
     }
   });
 });
