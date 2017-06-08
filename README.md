@@ -1,4 +1,4 @@
-#jenkins-lightson
+# jenkins-lightson
 
 A Node.js application to control Bluetooth LED lights with respect to jenkins' build states.
 
