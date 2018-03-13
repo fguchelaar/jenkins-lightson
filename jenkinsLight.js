@@ -1,64 +1,28 @@
 var http = require('http');
 var noble = require('noble');
 var lightCommands = require('./lightCommands.js');
-var httpntlm = require('httpntlm');
 
-var color_service = 'ffe5';
-var rgbw_char_uuid = 'ffe9';
+var VSTSProxy = require('./VSTSProxy.js');
 
-var commands = new lightCommands();
-
-function JenkinsLight(baseURL, project, buildDefinition, username, password, domain, peripheral) {
+function JenkinsLight(baseURL, project, buildDefinition, token, ledController, startIndex, numberOfBuilds) {
   this._baseURL = baseURL;
   this._project = project;
   this._buildDefinition = buildDefinition;
-  this._username = username;
-  this._password = password;
-  this._domain = domain;
-  this._peripheral = peripheral;
+  this._startIndex = startIndex;
+  this._numberOfBuilds = numberOfBuilds;
 
+  this._proxy = new VSTSProxy(baseURL, project, buildDefinition, token);
+  this._ledController = ledController;
   this._enabled = false;
-  this._rgbw = undefined;
   this._refreshTimer = undefined;
 
   var _this = this;
 
-  this._peripheral.discoverServices([color_service], function (error, services) {
-
-    for (var i in services) {
-      _this.log(' ' + i + ' uuid: ' + services[i].uuid);
-      var service = services[i];
-
-      service.discoverCharacteristics([rgbw_char_uuid], function (error, characteristics) {
-
-        for (var i in characteristics) {
-          var characteristic = characteristics[i];
-          _this.log(' ' + i + ': ' + characteristic.uuid);
-          if (characteristic.uuid === rgbw_char_uuid) {
-            _this._rgbw = characteristic;
-          }
-        }
-
-        if (_this._rgbw !== undefined) {
-
-          _this.turnOn();
-          setTimeout(function () {
-            _this.setBuildState('initial');
-            _this.refreshBuildState();
-          }, 200);
-        }
-        else {
-          _this.log('could not find "rgbw characteristic"');
-        }
-      });
-    }
-  });
-
-  this._peripheral.once('disconnect', function () {
-    _this.log('disconnected');
-    // TODO: emit some event, so that we can rescan 
-  });
-
+  _this.turnOn();
+  setTimeout(function () {
+    // _this.setBuildState('initial');
+    _this.refreshBuildState();
+  }, 200);
 }
 
 JenkinsLight.prototype.turnOn = function () {
@@ -66,8 +30,6 @@ JenkinsLight.prototype.turnOn = function () {
     this.log('swithed to ON');
 
     this._enabled = true;
-
-    this._rgbw.write(new Buffer(commands.on()), true);
 
     this._lastBuildState = '';
     var _this = this;
@@ -85,7 +47,6 @@ JenkinsLight.prototype.turnOff = function () {
 
     clearInterval(this._refreshTimer);
     this._refreshTimer = undefined;
-    this._rgbw.write(new Buffer(commands.off()), true);
   }
 };
 
@@ -94,100 +55,47 @@ JenkinsLight.prototype.log = function (message) {
 };
 
 JenkinsLight.prototype.refreshBuildState = function () {
-
-  var theUrl = this._baseURL + this._project + "/_apis/build/builds?definitions=" + this._buildDefinition + "&$top=1"
-  var _this = this;
-
-  httpntlm.get({
-    url: theUrl,
-    username: this._username,
-    password: this._password,
-    domain: this._domain
-  }, function (err, res) {
-
-    if (err) {
-      _this.log("ERROR: " + err);
-      _this.setBuildState('ERROR');
-    }
-    else {
-      try {
-        var response = JSON.parse(res.body);
-        if (response.value[0].status == 'completed') {
-          if (response.value[0].result == 'failed') {
-            _this.setBuildState('FAILURE');
-          }
-          else if (response.value[0].result == 'succeeded') {
-            _this.setBuildState('SUCCESS');
-          }
-        }
-        else if (response.value[0].status == 'inProgress') {
-          _this.setBuildState('BUILDING');
-        }
-        else if (response.value[0].status == 'notStarted') {
-          _this.setBuildState('NOTSTARTED');
-        }
-        else {
-          _this.log("ERROR: unexpected status/result.\n" + response);
-          _this.setBuildState('ERROR');
-        }
-      } catch (e) {
-        _this.log('ERROR: getting JSON: ' + e);
-        _this.setBuildState('ERROR');
-      }
-    }
+  const _this = this;
+  this._proxy.getLatestStates(this._numberOfBuilds, (states) => {
+    _this.setBuildStates(states);
   });
 };
 
-JenkinsLight.prototype.setBuildState = function (state) {
+JenkinsLight.prototype.setBuildStates = function (states) {
 
-  if (this._enabled && this.lastBuildState !== state) {
-    var _this = this;
-
-    this.lastBuildState = state;
-
-    this.log('set build state to: ' + state);
-
-    var bytes = [];
-
+  const colors = states.map(state => {
     switch (state.toUpperCase()) {
       case 'FAILURE':
         {
-          bytes = commands.rgb(0x10, 0x00, 0x00);
-          break;
+          return "020000";
         }
       case 'SUCCESS':
         {
-          bytes = commands.rgb(0x00, 0x10, 0x00);
-          break;
+          return "000200";
         }
       case 'BUILDING':
         {
-          bytes = commands.rgb(0x00, 0x00, 0x10);
-          break;
+          return "000010";
         }
       case 'NOTSTARTED':
         {
-          bytes = commands.rgb(0x00, 0x02, 0x02);
-          break;
+          return "040004";
         }
       case 'INITIAL':
         {
-          bytes = commands.rgb(0x02, 0x02, 0x00);
-          break;
+          return "020200";
         }
       default:
         {
-          bytes = commands.rgb(0x04, 0x02, 0x00);
+          return "040200";
           break;
         }
     }
+  }).join(',');
 
-    this._rgbw.write(new Buffer(bytes), true, function (error) {
-      if (error != null) {
-        _this.log("ERROR: writing to characteristic: " + error);
-      }
-    });
-  }
+  const command = this._startIndex + ',' + colors + '\n';
+
+  this._ledController.exec(command);
 };
 
 module.exports = JenkinsLight;
